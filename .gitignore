@@ -1,2 +1,16 @@
 *.class
+*.jar
 *.log
+.idea
+*.sw*
+.lock*#
+
+pom.xml
+classes/
+targets/
+.lein-deps-sum
+
+project/target
+project/project
+target
+
