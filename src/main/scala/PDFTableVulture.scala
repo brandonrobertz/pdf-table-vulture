@@ -29,6 +29,9 @@ class Box(_x: Int, _y: Int, _w: Int, _h: Int) {
   def y = _y
   def w = _w
   def h = _h
+  override def toString(): String = {
+    return f"Box x:${x}%d, y:${y}%d, w:${w}%d, h:${h}%d"
+  }
 }
 
 class Size(_w: Int, _h: Int) {
@@ -36,13 +39,20 @@ class Size(_w: Int, _h: Int) {
   def h = _h
 }
 
-class Primitives(filename: String) {
-  def pdf: Document = PDF.open(filename)
+class Primitives(pdf: Document) {
   def pages: Int = pdf.getPageCnt
 
   /**
    * Return a Size with the page width and height
-   * filled.
+   * filled. Note that in snowtide PDF model, a
+   * PDF coordinate system works like this:
+   *
+   * (0,792)_____ (612,792)
+   *       |     |
+   *       |     |
+   *       |     |
+   *       |_____|
+   *    (0,0)    (612,0)
    */
   def pageSize(pg: Int): Size = {
     var page = pdf.getPage(pg)
@@ -57,7 +67,7 @@ class Primitives(filename: String) {
    * to use spacing to represent the visual layout
    * of the text on a page.
    */
-  def extractPageText(pg: Int, x: Int, y: Int): String = {
+  def extractPageText(pg: Int): String = {
     var page: Page = pdf.getPage(pg)
     var buffer = new StringWriter
     page.pipe(new VisualOutputTarget(buffer))
@@ -66,11 +76,11 @@ class Primitives(filename: String) {
 
   /**
    * For a given page and region on that page, extract and
-   * return the text in that area.
+   * return the text in that box.
    */
-  def areaText(pg: Int, area: Box, label: String = "region"): String = {
+  def boxText(pg: Int, box: Box, label: String = "region"): String = {
     var tgt: RegionOutputTarget = new RegionOutputTarget()
-    tgt.addRegion(area.x, area.y, area.w, area.h, label)
+    tgt.addRegion(box.x, box.y, box.w, box.h, label)
 
     var page = pdf.getPage(pg)
     page.pipe(tgt)
@@ -85,23 +95,30 @@ class Primitives(filename: String) {
    * The condition function needs to accept a text string and return
    * false (don't stop) or true (condition met, stop scanning).
    */
-  def xScanUntil(condition: (String) => Boolean): Int = {
-    // TODO: find page top
-    var v: Int = 100
+  def yScanUntil(pg: Int, condition: (String) => Boolean): Int = {
+    var start: Size = pageSize(pg)
+    // start at the top (the height) of the page, work down
+    var y: Int = start.h
+    // use a very thin scan line to get accurate results
+    var scanLineSize = 1
+    var size: Size = pageSize(pg)
     breakable {
-      while (v < 0) {
+      while (y > 0) {
         // extract text from a thin line across the page
-        var text = "Extracted from line"
+        var box = new Box(0, y, size.w, scanLineSize)
+        println(f"yScanUntil at ${box.toString}%s")
+        var text = boxText(pg, box)
+        println(f"text: ${text}%s")
         if (condition(text)) break
         // increment and loop otherwise
-        v = v - 1
+        y = y - 1
       }
     }
-    return v;
+    return y;
   }
 
-  // TODO: merge into xScanUntil
-  def yScanUntil(condition: (String) => Boolean): Int = {
+  /*
+  def xScanUntil(condition: (String) => Boolean): Int = {
     var v: Int = 0
     // TODO: find page top
     var xMax: Int = 100
@@ -117,22 +134,24 @@ class Primitives(filename: String) {
     }
     return v;
   }
+  */
 
   /**
    * Find the coordinates of a given text on a page.
    */
   def findText(pg: Int, title: String): Coord = {
     def stringFound(text: String): Boolean = {
-      return true
+      println(f"stringFound? text: ${text}%s")
+      return text contains title
     }
-    var x = xScanUntil(stringFound)
-    return new Coord(x, 0)
+    var y = yScanUntil(pg, stringFound)
+    return new Coord(0, y)
   }
 
 }
 
-class TableExtractor(filename: String) {
-  def tools = new Primitives(filename)
+class TableExtractor(pdf: Document) {
+  def tools = new Primitives(pdf)
 
   /**
    * For a given text, find the first page it appears on.
@@ -158,12 +177,13 @@ object PDFTableVulture {
     var filename = "data/DEOCS.pdf"
     var tableName = "Table 2.13 Sexual Assault Prevention Climate"
     var page = 17
-    var primitives = new Primitives(filename)
-    var pageText: String = primitives.extractPageText(page, 0, 0)
+    var pdf: Document = PDF.open(filename)
+    var primitives = new Primitives(pdf)
+    var pageText: String = primitives.extractPageText(page)
     // println(pageText)
-    var area = new Box(200, 200, 100, 50)
-    var areaText = primitives.areaText(page, area)
-    println(areaText)
+    var box = new Box(200, 200, 100, 50)
+    var boxText = primitives.boxText(page, box)
+    println(boxText)
     println("==================================================")
   }
 }
