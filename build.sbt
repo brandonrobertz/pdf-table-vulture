@@ -14,6 +14,7 @@ lazy val root = (project in file(".")).
     )),
     name := "PDFTableVulture",
     libraryDependencies ++= Seq(
+		"org.scalatest" %% "scalatest" % "3.0.5" % "test"
     ),
     scalacOptions += "-feature",
     scalacOptions += "-Yresolve-term-conflict:object"
