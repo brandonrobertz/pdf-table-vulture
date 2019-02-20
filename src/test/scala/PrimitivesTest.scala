@@ -37,4 +37,18 @@ class PrimitivesSuite extends FunSuite {
     assert(c.y == 683)
     assert(c.x == 207)
   }
+
+  test("Can identify a simple page correctly") {
+    var tableTitle = "Table 2.13 Sexual Assault Prevention Climate"
+    var pageNumber = p.identifyPage(tableTitle)
+    assert(pageNumber == 17)
+  }
+
+  test("Can identify a more difficult page correctly") {
+    var tableTitle = "Figure 7. Respondents’ Knowledge of Military Attorney Eligibility."
+    var pageNumber = p.identifyPage(tableTitle)
+    assert(pageNumber == 21)
+  }
 }
+
+

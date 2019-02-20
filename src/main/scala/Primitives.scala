@@ -174,22 +174,6 @@ class Primitives(pdf: Document) {
     return new Coord(x, y)
   }
 
-}
-
-/**
- * A description of a table we're intending on extracting.
- */
-class TableDesc(_title: String, _questions: Array[String]) {
-  def title = _title
-  def questions = _questions
-}
-
-/**
- * All the things we need for table extaction.
- */
-class TableExtractor(pdf: Document) {
-  def p = new Primitives(pdf)
-
   /**
    * Take our title and make some modifications
    */
@@ -207,9 +191,9 @@ class TableExtractor(pdf: Document) {
    */
   def identifyPage(text: String): Int = {
     var ptrn = regexify(text)
-    for (pg <- 1 to p.pages - 1) {
+    for (pg <- 1 to pages - 1) {
       // Extract page text
-      var pageText = p.extractPageText(pg)
+      var pageText = extractPageText(pg)
       println("================================================")
       println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
       println(f"pageText:\n${pageText}%s")
@@ -227,6 +211,22 @@ class TableExtractor(pdf: Document) {
 
     return -1
   }
+
+}
+
+/**
+ * A description of a table we're intending on extracting.
+ */
+class TableDesc(_title: String, _questions: Array[String]) {
+  def title = _title
+  def questions = _questions
+}
+
+/**
+ * All the things we need for table extaction.
+ */
+class TableExtractor(pdf: Document) {
+  def p = new Primitives(pdf)
 }
 
 object PDFTableVulture {
