@@ -94,6 +94,8 @@ class Primitives(pdf: Document) {
    * until the text from the current line matches some condition.
    * The condition function needs to accept a text string and return
    * false (don't stop) or true (condition met, stop scanning).
+   *
+   * Returns the y position of the top of the text or -1.
    */
   def yScanUntil(pg: Int, condition: (String) => Boolean): Int = {
     var start: Size = pageSize(pg)
@@ -103,12 +105,11 @@ class Primitives(pdf: Document) {
     var scanLineSize = 1
     var size: Size = pageSize(pg)
     breakable {
-      while (y > 0) {
+      while (y >= 0) {
         // extract text from a thin line across the page
         var box = new Box(0, y, size.w, scanLineSize)
-        println(f"yScanUntil at ${box.toString}%s")
-        var text = boxText(pg, box)
-        println(f"text: ${text}%s")
+        var text = boxText(pg, box).replace("\n", "")
+        println(f"yScanUntil at ${box.toString}%s text: ${text}%s")
         if (condition(text)) break
         // increment and loop otherwise
         y = y - 1
@@ -117,27 +118,40 @@ class Primitives(pdf: Document) {
     return y;
   }
 
-  /*
-  def xScanUntil(condition: (String) => Boolean): Int = {
-    var v: Int = 0
-    // TODO: find page top
-    var xMax: Int = 100
+  /**
+   * For a give page and y position, scan the x-axis (from
+   * right to left) until a condition function returns true.
+   */
+  def xScanUntil(pg: Int, y: Int, condition: (String) => Boolean): Int = {
+    var scanLineSize = 1
+    var size: Size = pageSize(pg)
+    var x = size.w - 1
     breakable {
-      while (v < xMax) {
-        break
-        // extract text from a thin line across the page
-        // see if it matches
-        // return v if yes
-        // increment and loop otherwise
-        v = v + 1
+      while (x >= 0) {
+        var box = new Box(x, y, size.w, scanLineSize)
+        var text = boxText(pg, box).replace("\n", "")
+        println(f"xScanUntil at ${box.toString}%s text: ${text}%s")
+        if (condition(text)) break
+        x = x - 1
       }
     }
-    return v;
+    return x;
   }
-  */
 
   /**
-   * Find the coordinates of a given text on a page.
+   * Find the coordinates of a given text on a page. It does so using
+   * two methods for the x and y axes.
+   *
+   * 1) To find the Y (vertical position of the text) we scan down
+   * from the top of the page with a very thin scanline, grabbing
+   * the text we find. We mark the initial spot we find the text
+   * we're looking for.
+   *
+   * 2) Then, once we have the Y position, we scan the X axis
+   * from right to left, looking for the first instance of text
+   * match and then stopping.
+   *
+   * This gives us propert X and Y values for our text.
    */
   def findText(pg: Int, title: String): Coord = {
     def stringFound(text: String): Boolean = {
@@ -145,7 +159,19 @@ class Primitives(pdf: Document) {
       return text contains title
     }
     var y = yScanUntil(pg, stringFound)
-    return new Coord(0, y)
+
+    var lastText = ""
+    def stringCaptured(text: String): Boolean = {
+      println(f"stringCaptured? text: ${text}%s")
+      if (lastText.isEmpty) {
+        lastText = text
+        return false
+      }
+      return  text contains title;
+   }
+    var x = xScanUntil(pg, y, stringCaptured)
+
+    return new Coord(x, y)
   }
 
 }

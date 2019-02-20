@@ -35,6 +35,7 @@ class PrimitivesSuite extends FunSuite {
     var c: Coord = p.findText(tablePage, tableTitle)
     println( f"${tableTitle}%s found at x: ${c.x}%d y: ${c.y}%d")
     assert(c.y == 683)
+    assert(c.x == 207)
   }
 
 }
