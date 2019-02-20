@@ -176,23 +176,55 @@ class Primitives(pdf: Document) {
 
 }
 
+/**
+ * A description of a table we're intending on extracting.
+ */
+class TableDesc(_title: String, _questions: Array[String]) {
+  def title = _title
+  def questions = _questions
+}
+
+/**
+ * All the things we need for table extaction.
+ */
 class TableExtractor(pdf: Document) {
-  def tools = new Primitives(pdf)
+  def p = new Primitives(pdf)
+
+  /**
+   * Take our title and make some modifications
+   */
+  def regexify(string: String): String = {
+    var replaced =  string.replaceAll(
+      "\\s+", "\\\\s*"
+    ).replaceAll(
+      "’", "."
+    )
+    return f".*${replaced}%s.*"
+  }
 
   /**
    * For a given text, find the first page it appears on.
    */
   def identifyPage(text: String): Int = {
-    var lastPage: Int = 100
-    var currentPage: Int = 0
-    while (currentPage < lastPage) {
+    var ptrn = regexify(text)
+    for (pg <- 1 to p.pages - 1) {
       // Extract page text
-      // look for page text
-      // return if found
-      // otherwise, increment page and loop
-      currentPage = currentPage + 1
+      var pageText = p.extractPageText(pg)
+      println("================================================")
+      println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
+      println(f"pageText:\n${pageText}%s")
+      println("------------------------------------------------")
+
+      if (pageText contains text) {
+        println("Page text exact match!")
+        return pg
+      }
+      if (pageText.replace("\n", "") matches ptrn) {
+        println("Pattern match!")
+        return pg
+      }
     }
-    // return -1
+
     return -1
   }
 }
@@ -210,7 +242,7 @@ object PDFTableVulture {
     var box = new Box(200, 200, 100, 50)
     var boxText = primitives.boxText(page, box)
     println(boxText)
-    println("==================================================")
+    println("--------------------------------------------------")
   }
 }
 

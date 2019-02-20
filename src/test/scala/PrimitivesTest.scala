@@ -37,6 +37,4 @@ class PrimitivesSuite extends FunSuite {
     assert(c.y == 683)
     assert(c.x == 207)
   }
-
 }
-
