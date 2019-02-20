@@ -11,8 +11,6 @@ import com.snowtide.pdf.Page
 import com.snowtide.pdf.VisualOutputTarget
 import com.snowtide.pdf.RegionOutputTarget
 
-// import org.bxroberts.interactivescraper.ManualCrawl
-
 /**
  * A single point on a PDF page
  */
@@ -97,13 +95,17 @@ class Primitives(pdf: Document) {
    *
    * Returns the y position of the top of the text or -1.
    */
-  def yScanUntil(pg: Int, condition: (String) => Boolean): Int = {
-    var start: Size = pageSize(pg)
-    // start at the top (the height) of the page, work down
-    var y: Int = start.h
+  def yScanUntil(
+    pg: Int, condition: (String) => Boolean, startY: Int = -1
+  ): Int = {
+    // start at Y or the top (the height) of the page, work down
+    var y: Int = startY
+    var size: Size = pageSize(pg)
+    if (startY == -1) {
+      y = size.h
+    }
     // use a very thin scan line to get accurate results
     var scanLineSize = 1
-    var size: Size = pageSize(pg)
     breakable {
       while (y >= 0) {
         // extract text from a thin line across the page
@@ -112,7 +114,7 @@ class Primitives(pdf: Document) {
         println(f"yScanUntil at ${box.toString}%s text: ${text}%s")
         if (condition(text)) break
         // increment and loop otherwise
-        y = y - 1
+      y = y - 1
       }
     }
     return y;
@@ -122,10 +124,15 @@ class Primitives(pdf: Document) {
    * For a give page and y position, scan the x-axis (from
    * right to left) until a condition function returns true.
    */
-  def xScanUntil(pg: Int, y: Int, condition: (String) => Boolean): Int = {
+  def xScanUntil(
+    pg: Int, condition: (String) => Boolean, y: Int, startX: Int = -1
+  ): Int = {
     var scanLineSize = 1
     var size: Size = pageSize(pg)
-    var x = size.w - 1
+    var x = startX;
+    if (startX == -1) {
+      x = size.w - 1
+    }
     breakable {
       while (x >= 0) {
         var box = new Box(x, y, size.w, scanLineSize)
@@ -169,7 +176,7 @@ class Primitives(pdf: Document) {
       }
       return  text contains title;
    }
-    var x = xScanUntil(pg, y, stringCaptured)
+    var x = xScanUntil(pg, stringCaptured, y)
 
     return new Coord(x, y)
   }
@@ -211,7 +218,6 @@ class Primitives(pdf: Document) {
 
     return -1
   }
-
 }
 
 /**
@@ -227,6 +233,33 @@ class TableDesc(_title: String, _questions: Array[String]) {
  */
 class TableExtractor(pdf: Document) {
   def p = new Primitives(pdf)
+
+  /**
+   * The algorithm for extracting tables:
+   *
+   * 1. Find the Y of table title
+   *
+   * 2. From that Y, for each Q in Questions ...
+   *   a. find the top of the first question
+   *   b. find the bottom of the first question
+   *
+   * NOTE: All searches wrap to the next page
+   *
+   * 3. Take our question rows and for each
+   * split the question from the values
+   *
+   * 4. Taking advantage of the 9 (10%) pattern
+   * of the values (use a config), split the
+   * values N times
+   *
+   * 5. This gives us a multi dimensional array
+   * that we need to turn into a CSV
+   */
+  def extractTable(table: TableDesc): String = {
+    var pg: Int = p.identifyPage(table.title)
+    var titleY = p.findText(pg, table.title)
+    return "String"
+  }
 }
 
 object PDFTableVulture {
