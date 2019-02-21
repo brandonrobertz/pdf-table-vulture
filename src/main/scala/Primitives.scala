@@ -83,6 +83,7 @@ class Primitives(pdf: Document) {
    * return the text in that box.
    */
   def boxText(pg: Int, box: Box, label: String = "region"): String = {
+    println(f"boxText pg:${pg}%d ${box.toString}%s")
     val tgt: RegionOutputTarget = new RegionOutputTarget()
     tgt.addRegion(box.x, box.y, box.w, box.h, label)
 
@@ -90,6 +91,7 @@ class Primitives(pdf: Document) {
     page.pipe(tgt)
 
     val region: String = tgt.getRegionText(label)
+    println(f"region text: ${region}%s")
     return region
   }
 
@@ -107,6 +109,7 @@ class Primitives(pdf: Document) {
     pg: Int, condition: (String) => Boolean, startY: Int = -1,
     direction: (Int) => Int = (y) => {y - 1}
   ): Int = {
+    println(f"yScanUntil pg:${pg}%d startY:${startY}%d")
     // start at Y or the top (the height) of the page, work down
     var y: Int = startY
     val size: Size = pageSize(pg)
@@ -137,8 +140,9 @@ class Primitives(pdf: Document) {
    */
   def xScanUntil(
     pg: Int, condition: (String) => Boolean, y: Int, startX: Int = -1,
-    direction: (Int) => Int = (x) => {x - 1}
+    direction: String = "dec"
   ): Int = {
+    println(f"xScanUntil pg:${pg}%d y:${y}%d startX:${startX}%d dir:${direction}%s")
     val scanLineSize = 1
     val size: Size = pageSize(pg)
     var x = startX;
@@ -147,16 +151,31 @@ class Primitives(pdf: Document) {
     }
 
     breakable {
-      while (x >= 0) {
-        val box = new Box(x, y, size.w, scanLineSize)
-        val text = boxText(pg, box).replace("\n", "")
-        if (condition(text)) break
-        x = direction(x)
+      while ((x >= 0) && (x < size.w)) {
+        if (direction == "dec") {
+          val box = new Box(x, y, size.w, scanLineSize)
+          val text = boxText(pg, box).replace("\n", "")
+          if (condition(text)) break
+        } else {
+          val box = new Box(startX, y, x - startX, scanLineSize)
+          val text = boxText(pg, box).replace("\n", "")
+          if (condition(text)) {
+            return x
+            break
+          }
+        }
+
+        if (direction == "dec") {
+          x = x - 1
+        } else {
+          x = x + 1
+          println(f"x: ${x}%d")
+        }
       }
     }
 
     println(f"Scanned. Found x: ${x}%s")
-    return x;
+    return x
   }
 
   /**
@@ -210,7 +229,7 @@ class Primitives(pdf: Document) {
     println(f"findText: ${title}%s, pg: ${pg}%d")
     def stringFound(text: String): Boolean = {
       val m = exactOrRegexMatch(title, ptrn, text)
-      println(f"finding Y: '${text}%s' contains '${title}%s'? ${m}%b")
+      // println(f"finding Y: '${text}%s' contains '${title}%s'? ${m}%b")
       return m
     }
 
@@ -224,7 +243,7 @@ class Primitives(pdf: Document) {
         return false
       }
       val m = exactOrRegexMatch(title, ptrn, text)
-      println(f"finding X: '${text}%s' contains '${title}%s'? ${m}%b")
+      // println(f"finding X: '${text}%s' contains '${title}%s'? ${m}%b")
       return m
     }
 
@@ -242,17 +261,17 @@ class Primitives(pdf: Document) {
     for (pg <- 1 to pages - 1) {
       // Extract page text
       val pageText = extractPageText(pg)
-      println("================================================")
-      println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
-      println(f"pageText:\n${pageText}%s")
-      println("------------------------------------------------")
+      // println("================================================")
+      // println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
+      // println(f"pageText:\n${pageText}%s")
+      // println("------------------------------------------------")
 
       if (pageText contains text) {
-        println("Page text exact match!")
+        // println("Page text exact match!")
         return pg
       }
       if (pageText.replace("\n", "") matches ptrn) {
-        println("Pattern match!")
+        // println("Pattern match!")
         return pg
       }
     }

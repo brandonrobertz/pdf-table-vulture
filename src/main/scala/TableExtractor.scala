@@ -1,5 +1,7 @@
 package org.bxroberts.tablevulture
 
+import scala.collection.mutable.ArrayBuffer
+
 import com.snowtide.pdf.Document
 
 /**
@@ -7,6 +9,7 @@ import com.snowtide.pdf.Document
  */
 class TableQuestion(_text: String) {
   def text = _text
+
   private def lines = _text.split("\n").map(_.trim).filter(!_.isEmpty)
   def topText(): String = {
     val top = lines(0)
@@ -92,6 +95,82 @@ class TableExtractor(pdf: Document) {
     }
 
     return rows
+  }
+
+  def cleanCellValue(text: String): String = {
+    return text.replace(
+      "\n", " "
+    ).replaceAll(
+      "\\s+", " "
+    ).trim
+  }
+
+  /**
+   * Take a question and tableRow and split up the row into
+   * the question (label) and individual values. Returns an
+   * array of strings, ["label, "val1", ..., "valN"] to be
+   * converted to CSV.
+   *
+   * Split question area algorithm:
+   *
+   * 1. scan x, from start of Q, until we hit end of question.
+   *
+   * 2. then scan until we hit something else
+   *
+   * 3. take the distance between the end and next item, divide
+   * by 2 and that's our split point for question from vals
+   *
+   * 4. accept a given space threshold, scan X from the split point
+   * looking for space split thresholds. when one is found, split
+   * the values at that point, keep going until nValues is met
+   */
+  def splitTableRow(
+    question: TableQuestion, row: TableRow, nValues: Int = 0
+  ): ArrayBuffer[String] = {
+    println("Building row cells...")
+    var cells = ArrayBuffer[String]()
+    // wait for full first line of question
+    def findEndOfQ(text: String): Boolean = {
+      val ptrn = p.regexify(question.topText)
+      println(f"searching for: ${question.topText}%s or: ${ptrn}%s")
+      println(f"text: ${text}%s")
+      return p.exactOrRegexMatch(question.topText, ptrn, text)
+    }
+    // scan from the left, beginning of the top part of the question
+    // towards the right of the page until we have the whole top line
+    // of the question scanned. the end of the top line of the question
+    // will be our endQX value
+    val endQX = p.xScanUntil(
+      row.pg, findEndOfQ, row.box.y, 0, "inc"
+    )
+    println(f"endQX: ${endQX}%d")
+
+    def findStartOfVal(text: String): Boolean = {
+      println(f"searching for number")
+      println(f"text: ${text}%s")
+      return text matches ".*[0-9]+.*"
+    }
+    val startVX = p.xScanUntil(
+      row.pg, findStartOfVal, row.box.y, endQX + 5, "inc"
+    )
+    println(f"startVX: ${startVX}%d")
+
+    // get the middle point, this is rounded
+    val splitPointX = (endQX + startVX) / 2
+
+    val qBox = new Box(row.box.x, row.box.y, splitPointX - row.box.x, -1*row.box.h)
+    val qText: String = cleanCellValue(p.boxText(row.pg, qBox))
+    println(f"Question: ${qText}%s")
+    cells += qText
+
+    val vBox = new Box(
+      splitPointX, row.box.y, row.box.w - splitPointX, -1*row.box.h
+    )
+    val values: String = cleanCellValue(p.boxText(row.pg, vBox))
+    println(f"Values: ${values}%s")
+    cells += values
+
+    return cells
   }
 
   /**
