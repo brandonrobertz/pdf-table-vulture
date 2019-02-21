@@ -94,15 +94,18 @@ class Primitives(pdf: Document) {
   }
 
   /**
-   * Starting from the top of the given page, scan down, line-by-line,
-   * until the text from the current line matches some condition.
-   * The condition function needs to accept a text string and return
-   * false (don't stop) or true (condition met, stop scanning).
+   * Starting from the top of the given page, scan down (by
+   * default, configurable by providing a different direction
+   * function), line-by-line, until the text from the
+   * current line matches some condition.  The condition
+   * function needs to accept a text string and return false
+   * (don't stop) or true (condition met, stop scanning).
    *
    * Returns the y position of the top of the text or -1.
    */
   def yScanUntil(
-    pg: Int, condition: (String) => Boolean, startY: Int = -1
+    pg: Int, condition: (String) => Boolean, startY: Int = -1,
+    direction: (Int) => Int = (y) => {y - 1}
   ): Int = {
     // start at Y or the top (the height) of the page, work down
     var y: Int = startY
@@ -119,7 +122,7 @@ class Primitives(pdf: Document) {
         val box = new Box(0, y, size.w, scanLineSize)
         val text = boxText(pg, box).replace("\n", "")
         if (condition(text)) break
-        y = y - 1
+        y = direction(y)
       }
     }
 
@@ -129,10 +132,12 @@ class Primitives(pdf: Document) {
 
   /**
    * For a give page and y position, scan the x-axis (from
-   * right to left) until a condition function returns true.
+   * right to left, by default) until a condition function
+   * returns true.
    */
   def xScanUntil(
-    pg: Int, condition: (String) => Boolean, y: Int, startX: Int = -1
+    pg: Int, condition: (String) => Boolean, y: Int, startX: Int = -1,
+    direction: (Int) => Int = (x) => {x - 1}
   ): Int = {
     val scanLineSize = 1
     val size: Size = pageSize(pg)
@@ -146,7 +151,7 @@ class Primitives(pdf: Document) {
         val box = new Box(x, y, size.w, scanLineSize)
         val text = boxText(pg, box).replace("\n", "")
         if (condition(text)) break
-        x = x - 1
+        x = direction(x)
       }
     }
 
