@@ -64,12 +64,18 @@ class TableExtractor(pdf: Document) {
     // Identify our table's question row blocks
     // TODO: This search needs to span pages.
     var rows: Array[TableRow] = Array.empty
-    for (question <- table.questions) {
-      println("============================================================")
+    var lastY: Int = titleCoord.y - 1
+    val nQuestions: Int = table.questions.length
+    for (i <- 0 to nQuestions - 1) {
+      val question = table.questions(i)
+      println(f"# ROW ${i}%d")
+      println(f"Question text: ${question.text}")
       println(f"Finding question top: ${question.topText}%s")
+      println(f"Last Y: ${lastY}%d")
       val topCoord = p.findText(
-        pg, question.topText, 0, startY=titleCoord.y-1
+        pg, question.topText, 0, startY=lastY
       )
+      println(f"Found top coord: ${topCoord.toString}%s")
 
       // use the topY as start (not topY-1) in case we have
       // single line question
@@ -78,12 +84,13 @@ class TableExtractor(pdf: Document) {
       val btmCoord = p.findText(
         pg, question.bottomText, 0, startY=topCoord.y
       )
+      println(f"Found bottom coord: ${btmCoord.toString}%s")
 
       // build a box using our two Y coords, assume 100% width
       println("============================================================")
       println("Building box")
       val box = new Box(
-        0, topCoord.y, pgSize.w, topCoord.y - btmCoord.y
+        0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
       )
       println(f"box: ${box.toString}%s")
 
@@ -92,6 +99,14 @@ class TableExtractor(pdf: Document) {
       val tableRow = new TableRow(pg, box)
       println(f"tableRow: ${tableRow.toString}%s")
       rows ++= Array(tableRow)
+
+      // save for next run, to avoid repeating rows for
+      // texts that have duplicate starts of questions
+      lastY = btmCoord.y - 5
+
+      println("============================================================")
+      val boxText = p.boxText(pg, box)
+      println(f"Box Text: '${boxText}%s'")
     }
 
     return rows
@@ -127,13 +142,13 @@ class TableExtractor(pdf: Document) {
   def splitTableRow(
     question: TableQuestion, row: TableRow, nValues: Int = 0
   ): ArrayBuffer[String] = {
-    println("Building row cells...")
+    println("splitTableRow Building row cells...")
     var cells = ArrayBuffer[String]()
     // wait for full first line of question
     def findEndOfQ(text: String): Boolean = {
       val ptrn = p.regexify(question.topText)
-      println(f"searching for: ${question.topText}%s or: ${ptrn}%s")
-      println(f"text: ${text}%s")
+      // println(f"searching for: ${question.topText}%s or: ${ptrn}%s")
+      // println(f"text: ${text}%s")
       return p.exactOrRegexMatch(question.topText, ptrn, text)
     }
     // scan from the left, beginning of the top part of the question
@@ -146,8 +161,8 @@ class TableExtractor(pdf: Document) {
     println(f"endQX: ${endQX}%d")
 
     def findStartOfVal(text: String): Boolean = {
-      println(f"searching for number")
-      println(f"text: ${text}%s")
+      // println(f"searching for number")
+      // println(f"text: ${text}%s")
       return text matches ".*[0-9]+.*"
     }
     val startVX = p.xScanUntil(
@@ -158,13 +173,13 @@ class TableExtractor(pdf: Document) {
     // get the middle point, this is rounded
     val splitPointX = (endQX + startVX) / 2
 
-    val qBox = new Box(row.box.x, row.box.y, splitPointX - row.box.x, -1*row.box.h)
+    val qBox = new Box(row.box.x, row.box.y, splitPointX - row.box.x, row.box.h)
     val qText: String = cleanCellValue(p.boxText(row.pg, qBox))
     println(f"Question: ${qText}%s")
     cells += qText
 
     val vBox = new Box(
-      splitPointX, row.box.y, row.box.w - splitPointX, -1*row.box.h
+      splitPointX, row.box.y, row.box.w - splitPointX, row.box.h
     )
     val values: String = cleanCellValue(p.boxText(row.pg, vBox))
     println(f"Values: ${values}%s")

@@ -23,7 +23,10 @@ class Coord(_x: Int, _y: Int) {
 }
 
 /**
- * A box for a region of a PDF page.
+ * A box for a region of a PDF page. Width and height
+ * (when positive) extend up and to the right of the
+ * x and y (origin) coordinates. To make them go
+ * down and left, w and h need to be negative.
  */
 class Box(_x: Int, _y: Int, _w: Int, _h: Int) {
   def x = _x
@@ -83,7 +86,7 @@ class Primitives(pdf: Document) {
    * return the text in that box.
    */
   def boxText(pg: Int, box: Box, label: String = "region"): String = {
-    println(f"boxText pg:${pg}%d ${box.toString}%s")
+    // println(f"boxText pg:${pg}%d ${box.toString}%s")
     val tgt: RegionOutputTarget = new RegionOutputTarget()
     tgt.addRegion(box.x, box.y, box.w, box.h, label)
 
@@ -91,7 +94,7 @@ class Primitives(pdf: Document) {
     page.pipe(tgt)
 
     val region: String = tgt.getRegionText(label)
-    println(f"region text: ${region}%s")
+    // println(f"region text: ${region}%s")
     return region
   }
 
@@ -122,6 +125,8 @@ class Primitives(pdf: Document) {
     breakable {
       while (y >= 0) {
         // extract text from a thin line across the page
+        // scan one pixel UPWARDS, to get the bottom most
+        // coord of the text
         val box = new Box(0, y, size.w, scanLineSize)
         val text = boxText(pg, box).replace("\n", "")
         if (condition(text)) break
@@ -153,11 +158,11 @@ class Primitives(pdf: Document) {
     breakable {
       while ((x >= 0) && (x < size.w)) {
         if (direction == "dec") {
-          val box = new Box(x, y, size.w, scanLineSize)
+          val box = new Box(x, y, size.w, -scanLineSize)
           val text = boxText(pg, box).replace("\n", "")
           if (condition(text)) break
         } else {
-          val box = new Box(startX, y, x - startX, scanLineSize)
+          val box = new Box(startX, y, x - startX, -scanLineSize)
           val text = boxText(pg, box).replace("\n", "")
           if (condition(text)) {
             return x
@@ -169,7 +174,7 @@ class Primitives(pdf: Document) {
           x = x - 1
         } else {
           x = x + 1
-          println(f"x: ${x}%d")
+          // println(f"x: ${x}%d")
         }
       }
     }
@@ -226,7 +231,7 @@ class Primitives(pdf: Document) {
   ): Coord = {
 
     val ptrn = regexify(title)
-    println(f"findText: ${title}%s, pg: ${pg}%d")
+    println(f"findText: ${title}%s, pg: ${pg}%d, startY: ${startY}%d")
     def stringFound(text: String): Boolean = {
       val m = exactOrRegexMatch(title, ptrn, text)
       // println(f"finding Y: '${text}%s' contains '${title}%s'? ${m}%b")
@@ -243,7 +248,9 @@ class Primitives(pdf: Document) {
         return false
       }
       val m = exactOrRegexMatch(title, ptrn, text)
-      // println(f"finding X: '${text}%s' contains '${title}%s'? ${m}%b")
+      if (m) {
+        println(f"finding X: '${text}%s' contains '${title}%s'? ${m}%b")
+      }
       return m
     }
 

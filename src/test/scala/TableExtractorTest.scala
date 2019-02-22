@@ -65,16 +65,28 @@ class SplitTableRowSuite extends TableExtractorBaseSuite {
   test("Can split a tableRow") {
     val table: TableDesc = new TableDesc(
       "Table 2.13 Sexual Assault Prevention Climate",
-      Array(q1)
+      Array(q1, q2)
     )
     val rows: Array[TableRow] = te.findTableRows(table)
-    val cells = te.splitTableRow(q1, rows(0))
-    println(f"cells length: ${cells.length}%d")
-    assert(cells.length == 2)
-    val qText = cells(0)
-    val valsText = cells(1)
-    assert(qText contains q1.topText)
-    assert(valsText contains "82")
-    assert(valsText contains "(49%)")
+    val qs: Array[TableQuestion] = Array(q1, q2)
+    for (i <- 0 to qs.length - 1) {
+      val q = qs(i)
+      val cells = te.splitTableRow(q, rows(i))
+      println(f"cells length: ${cells.length}%d")
+      assert(cells.length == 2)
+      val qText = cells(0)
+      val valsText = cells(1)
+      assert(qText contains q1.topText)
+      // do a specific check to ensure we get the start and
+      // end char correct
+      if (i == 0) {
+        assert(valsText matches "^6\\s+\\(4%\\).*")
+        assert(valsText matches ".*\\s+82\\s+\\(49%\\)$")
+      } else if (i == 1) {
+        assert(valsText matches "^5\\s+\\(3%\\).*")
+        assert(valsText matches ".*\\s+70\\s+\\(42%\\)$")
+      }
+    }
   }
+
 }
