@@ -1,8 +1,10 @@
 package org.bxroberts.tablevulture
 
+import java.io.File
 import scala.collection.mutable.ArrayBuffer
 
 import com.snowtide.pdf.Document
+import com.github.tototoshi.csv.CSVWriter
 
 /**
  * A survey question object.
@@ -183,9 +185,16 @@ class TableExtractor(pdf: Document) {
     )
     val values: String = cleanCellValue(p.boxText(row.pg, vBox))
     println(f"Values: ${values}%s")
-    cells += values
+    cells ++= values.split("\\s+")
 
     return cells
+  }
+
+  def writeCSV(rows: Seq[Seq[String]]) = {
+    val f = new File("out.csv")
+    val writer = CSVWriter.open(f)
+    writer.writeAll(rows)
+    writer.close()
   }
 
   /**
@@ -209,11 +218,16 @@ class TableExtractor(pdf: Document) {
    * 5. This gives us a multi dimensional array
    * that we need to turn into a CSV
    */
-  def extractTable(table: TableDesc): String = {
+  def extractTable(table: TableDesc) = {
     val tableRows: Array[TableRow] = findTableRows(table)
-    for (row <- tableRows) {
+    var rows: ArrayBuffer[Seq[String]] = ArrayBuffer.empty
+    assert(tableRows.length == table.questions.length)
+    for (i <- 0 to tableRows.length) {
+      var question = table.questions(i)
+      var row = tableRows(i)
+      var cells = splitTableRow(question, row)
+      rows += cells.toSeq
     }
-
-    return "String"
+    writeCSV(rows.toSeq)
   }
 }
