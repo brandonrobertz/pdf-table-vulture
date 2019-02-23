@@ -157,7 +157,7 @@ class TableExtractor(pdf: Document) {
    * the values at that point, keep going until nValues is met
    */
   def splitTableRow(
-    question: TableQuestion, row: TableRow, nValues: Int = 0
+    question: TableQuestion, row: TableRow, nValues: Int = 14
   ): ArrayBuffer[String] = {
     println("splitTableRow Building row cells...")
     var cells = ArrayBuffer[String]()
@@ -202,7 +202,7 @@ class TableExtractor(pdf: Document) {
     )
     val values: String = cleanCellValue(p.boxText(vBox))
     println(f"Values: ${values}%s")
-    cells ++= values.split("\\s+")
+    cells ++= values.split("\\s+", nValues)
 
     return cells
   }
@@ -211,9 +211,6 @@ class TableExtractor(pdf: Document) {
     val f = new File(filename)
     val writer = CSVWriter.open(f)
     for(row <- rows) {
-      for(item <- row) {
-        println(f"item: ${item}%s")
-      }
       writer.writeRow(row)
     }
     writer.close()
@@ -244,16 +241,16 @@ class TableExtractor(pdf: Document) {
     val tableRows: Array[TableRow] = findTableRows(table)
     var rows: ArrayBuffer[Array[String]] = ArrayBuffer.empty
     assert(tableRows.length == table.questions.length)
-    for (i <- 0 to tableRows.length) {
+    for (i <- 0 to tableRows.length-1) {
       val question = table.questions(i)
-      println(f"Question ${question}%s")
+      // println(f"Question ${question}%s")
       val row = tableRows(i)
       val cells = splitTableRow(question, row)
-      for (item <- cells) {
-        println(f"Item: ${item}%s")
-      }
+      // for (item <- cells) {
+      //   println(f"Item: ${item}%s")
+      // }
       rows += cells.toArray
     }
-    // writeCSV(rows.toArray)
+    writeCSV(rows.toArray)
   }
 }

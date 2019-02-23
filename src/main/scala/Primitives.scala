@@ -194,7 +194,7 @@ class Primitives(pdf: Document) {
     ).replaceAll(
       "’", "."
     )
-    return f".*${replaced}%s.*"
+    return f".*\\b${replaced}%s\\b.*"
   }
 
   /**
@@ -204,10 +204,13 @@ class Primitives(pdf: Document) {
   def exactOrRegexMatch(
     needle: String, regexNeedle: String, haystack: String
   ): Boolean = {
-    if (haystack contains needle) {
+    val cleaned = haystack.replace("\n", "").replaceAll("\\s+", " ")
+    if (cleaned contains needle) {
+      println("Contains match!")
       return true
     }
-    if (haystack.replace("\n", "") matches regexNeedle) {
+    if (cleaned matches regexNeedle) {
+      println(f"Regex match ${regexNeedle}%s")
       return true
     }
     return false
@@ -275,12 +278,7 @@ class Primitives(pdf: Document) {
       // println(f"pageText:\n${pageText}%s")
       // println("------------------------------------------------")
 
-      if (pageText contains text) {
-        // println("Page text exact match!")
-        return pg
-      }
-      if (pageText.replace("\n", "") matches ptrn) {
-        // println("Pattern match!")
+      if (exactOrRegexMatch(text, ptrn, pageText)) {
         return pg
       }
     }

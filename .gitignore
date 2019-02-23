@@ -10,6 +10,8 @@ classes/
 targets/
 .lein-deps-sum
 
+*.csv
+
 project/target
 project/project
 target
