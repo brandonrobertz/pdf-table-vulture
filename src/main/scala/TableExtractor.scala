@@ -81,7 +81,7 @@ class TableExtractor(pdf: Document) {
     println("============================================================")
     println("Building box")
     val box = new Box(
-      0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
+      pg, 0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
     )
     println(f"box: ${box.toString}%s")
 
@@ -118,9 +118,11 @@ class TableExtractor(pdf: Document) {
       // save for next run, to avoid repeating rows for
       // texts that have duplicate starts of questions
       lastY = btmY - 5
+      // save the page we found the text on
+      pg = box.pg
 
       println("============================================================")
-      val boxText = p.boxText(tableRow.pg, box)
+      val boxText = p.boxText(box)
       println(f"Box Text: '${boxText}%s'")
     }
 
@@ -188,25 +190,32 @@ class TableExtractor(pdf: Document) {
     // get the middle point, this is rounded
     val splitPointX = (endQX + startVX) / 2
 
-    val qBox = new Box(row.box.x, row.box.y, splitPointX - row.box.x, row.box.h)
-    val qText: String = cleanCellValue(p.boxText(row.pg, qBox))
+    val qBox = new Box(
+      row.pg, row.box.x, row.box.y, splitPointX - row.box.x, row.box.h
+    )
+    val qText: String = cleanCellValue(p.boxText(qBox))
     println(f"Question: ${qText}%s")
     cells += qText
 
     val vBox = new Box(
-      splitPointX, row.box.y, row.box.w - splitPointX, row.box.h
+      row.pg, splitPointX, row.box.y, row.box.w - splitPointX, row.box.h
     )
-    val values: String = cleanCellValue(p.boxText(row.pg, vBox))
+    val values: String = cleanCellValue(p.boxText(vBox))
     println(f"Values: ${values}%s")
     cells ++= values.split("\\s+")
 
     return cells
   }
 
-  def writeCSV(rows: Seq[Seq[String]]) = {
-    val f = new File("out.csv")
+  def writeCSV(rows: Array[Array[String]], filename: String = "out.csv") = {
+    val f = new File(filename)
     val writer = CSVWriter.open(f)
-    writer.writeAll(rows)
+    for(row <- rows) {
+      for(item <- row) {
+        println(f"item: ${item}%s")
+      }
+      writer.writeRow(row)
+    }
     writer.close()
   }
 
@@ -233,14 +242,18 @@ class TableExtractor(pdf: Document) {
    */
   def extractTable(table: TableDesc) = {
     val tableRows: Array[TableRow] = findTableRows(table)
-    var rows: ArrayBuffer[Seq[String]] = ArrayBuffer.empty
+    var rows: ArrayBuffer[Array[String]] = ArrayBuffer.empty
     assert(tableRows.length == table.questions.length)
     for (i <- 0 to tableRows.length) {
-      var question = table.questions(i)
-      var row = tableRows(i)
-      var cells = splitTableRow(question, row)
-      rows += cells.toSeq
+      val question = table.questions(i)
+      println(f"Question ${question}%s")
+      val row = tableRows(i)
+      val cells = splitTableRow(question, row)
+      for (item <- cells) {
+        println(f"Item: ${item}%s")
+      }
+      rows += cells.toArray
     }
-    writeCSV(rows.toSeq)
+    // writeCSV(rows.toArray)
   }
 }

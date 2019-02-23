@@ -22,8 +22,8 @@ class PrimitivesSuite extends FunSuite {
   }
 
   test("Can extrct text from a small region on the page") {
-    var box = new Box(200, 200, 100, 50)
-    var found: String = p.boxText(tablePage, box)
+    var box = new Box(tablePage, 200, 200, 100, 50)
+    var found: String = p.boxText(box)
     println(f"x: ${box.x}%d y: ${box.y}%d")
     println(f"w: ${box.w}%d h: ${box.h}%d")
     println(f"Found: ${found}%s")

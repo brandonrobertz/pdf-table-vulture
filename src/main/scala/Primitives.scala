@@ -15,9 +15,11 @@ import com.snowtide.pdf.RegionOutputTarget
  * A single point on a PDF page
  */
 class Coord(_x: Int, _y: Int) {
+  // def pg = _pg
   def x = _x
   def y = _y
   override def toString(): String = {
+    //  pg:${pg}%d,
     return f"Coord x:${x}%d, y:${y}%d"
   }
 }
@@ -28,13 +30,14 @@ class Coord(_x: Int, _y: Int) {
  * x and y (origin) coordinates. To make them go
  * down and left, w and h need to be negative.
  */
-class Box(_x: Int, _y: Int, _w: Int, _h: Int) {
+class Box(_pg: Int, _x: Int, _y: Int, _w: Int, _h: Int) {
+  def pg = _pg
   def x = _x
   def y = _y
   def w = _w
   def h = _h
   override def toString(): String = {
-    return f"Box x:${x}%d, y:${y}%d, w:${w}%d, h:${h}%d"
+    return f"Box pg:${pg}%d, x:${x}%d, y:${y}%d, w:${w}%d, h:${h}%d"
   }
 }
 
@@ -85,12 +88,11 @@ class Primitives(pdf: Document) {
    * For a given page and region on that page, extract and
    * return the text in that box.
    */
-  def boxText(pg: Int, box: Box, label: String = "region"): String = {
-    // println(f"boxText pg:${pg}%d ${box.toString}%s")
+  def boxText(box: Box, label: String = "region"): String = {
     val tgt: RegionOutputTarget = new RegionOutputTarget()
     tgt.addRegion(box.x, box.y, box.w, box.h, label)
 
-    val page = pdf.getPage(pg)
+    val page = pdf.getPage(box.pg)
     page.pipe(tgt)
 
     val region: String = tgt.getRegionText(label)
@@ -127,8 +129,8 @@ class Primitives(pdf: Document) {
         // extract text from a thin line across the page
         // scan one pixel UPWARDS, to get the bottom most
         // coord of the text
-        val box = new Box(0, y, size.w, scanLineSize)
-        val text = boxText(pg, box).replace("\n", "")
+        val box = new Box(pg, 0, y, size.w, scanLineSize)
+        val text = boxText(box).replace("\n", "")
         if (condition(text)) break
         y = direction(y)
       }
@@ -158,12 +160,12 @@ class Primitives(pdf: Document) {
     breakable {
       while ((x >= 0) && (x < size.w)) {
         if (direction == "dec") {
-          val box = new Box(x, y, size.w, -scanLineSize)
-          val text = boxText(pg, box).replace("\n", "")
+          val box = new Box(pg, x, y, size.w, -scanLineSize)
+          val text = boxText(box).replace("\n", "")
           if (condition(text)) break
         } else {
-          val box = new Box(startX, y, x - startX, -scanLineSize)
-          val text = boxText(pg, box).replace("\n", "")
+          val box = new Box(pg, startX, y, x - startX, -scanLineSize)
+          val text = boxText(box).replace("\n", "")
           if (condition(text)) {
             return x
             break
@@ -296,8 +298,8 @@ object PDFTableVulture {
     val pdf: Document = PDF.open(filename)
     val primitives = new Primitives(pdf)
     val pageText: String = primitives.extractPageText(page)
-    val box = new Box(200, 200, 100, 50)
-    val boxText = primitives.boxText(page, box)
+    val box = new Box(page, 200, 200, 100, 50)
+    val boxText = primitives.boxText(box)
     println(boxText)
     println("--------------------------------------------------")
   }

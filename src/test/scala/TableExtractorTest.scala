@@ -127,3 +127,15 @@ class SplitTableRowSuite extends TableExtractorBaseSuite {
     }
   }
 }
+
+/*
+class CSVWriterSuite extends TableExtractorBaseSuite {
+  test("Can extract table to CSV") {
+    val table: TableDesc = new TableDesc(
+      title,
+      Array(q1, q2, q3, q4, q5)
+    )
+    te.extractTable(table)
+  }
+}
+*/
