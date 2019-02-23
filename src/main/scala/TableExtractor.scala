@@ -50,6 +50,48 @@ class TableRow(_pg: Int, _box: Box) {
 class TableExtractor(pdf: Document) {
   def p = new Primitives(pdf)
 
+  def findTableRow(
+    pg: Int, question: TableQuestion, startY: Int
+  ): (TableRow, Box, Int) = {
+    var pgSize: Size = p.pageSize(pg)
+
+    // val question = table.questions(i)
+    println(f"Question text: ${question.text}")
+    println(f"Finding question top: ${question.topText}%s")
+    println(f"Start Y: ${startY}%d")
+    val topCoord = p.findText(
+      pg, question.topText, 0, startY=startY
+    )
+    println(f"Found top coord: ${topCoord.toString}%s")
+
+    if (topCoord.y == -1) {
+      return findTableRow(pg + 1, question, pgSize.h)
+    }
+
+    // use the topY as start (not topY-1) in case we have
+    // single line question
+    println("============================================================")
+    println(f"Finding question bottom: ${question.bottomText}%s")
+    val btmCoord = p.findText(
+      pg, question.bottomText, 0, startY=topCoord.y
+    )
+    println(f"Found bottom coord: ${btmCoord.toString}%s")
+
+    // build a box using our two Y coords, assume 100% width
+    println("============================================================")
+    println("Building box")
+    val box = new Box(
+      0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
+    )
+    println(f"box: ${box.toString}%s")
+
+    println("============================================================")
+    println("Building tableRow")
+    val tableRow = new TableRow(pg, box)
+    println(f"tableRow: ${tableRow.toString}%s")
+    return (tableRow, box, btmCoord.y)
+  }
+
   /**
    * For a given table description, find the TableRows
    * identifying each row in the table.
@@ -57,57 +99,28 @@ class TableExtractor(pdf: Document) {
   def findTableRows(table: TableDesc): Array[TableRow] = {
     var pg: Int = p.identifyPage(table.title)
     val titleCoord: Coord = p.findText(pg, table.title)
-    var pgSize: Size = p.pageSize(pg)
 
     println(f"findTableRows pg: ${pg}%d")
-    println(f"titleCoord: ${titleCoord.toString}%s, pgSize: ${pgSize.toString}%s")
+    println(f"titleCoord: ${titleCoord.toString}%s")
     println(f"Number of questions: ${table.questions.length}%d")
 
     // Identify our table's question row blocks
     // TODO: This search needs to span pages.
-    var rows: Array[TableRow] = Array.empty
     var lastY: Int = titleCoord.y - 1
     val nQuestions: Int = table.questions.length
+    var rows: Array[TableRow] = Array.empty
     for (i <- 0 to nQuestions - 1) {
+      println(f"############################################################ ROW ${i}%d")
       val question = table.questions(i)
-      println(f"# ROW ${i}%d")
-      println(f"Question text: ${question.text}")
-      println(f"Finding question top: ${question.topText}%s")
-      println(f"Last Y: ${lastY}%d")
-      val topCoord = p.findText(
-        pg, question.topText, 0, startY=lastY
-      )
-      println(f"Found top coord: ${topCoord.toString}%s")
-
-      // use the topY as start (not topY-1) in case we have
-      // single line question
-      println("============================================================")
-      println(f"Finding question bottom: ${question.bottomText}%s")
-      val btmCoord = p.findText(
-        pg, question.bottomText, 0, startY=topCoord.y
-      )
-      println(f"Found bottom coord: ${btmCoord.toString}%s")
-
-      // build a box using our two Y coords, assume 100% width
-      println("============================================================")
-      println("Building box")
-      val box = new Box(
-        0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
-      )
-      println(f"box: ${box.toString}%s")
-
-      println("============================================================")
-      println("Building tableRow")
-      val tableRow = new TableRow(pg, box)
-      println(f"tableRow: ${tableRow.toString}%s")
+      val (tableRow, box, btmY) = findTableRow(pg, question, lastY)
       rows ++= Array(tableRow)
 
       // save for next run, to avoid repeating rows for
       // texts that have duplicate starts of questions
-      lastY = btmCoord.y - 5
+      lastY = btmY - 5
 
       println("============================================================")
-      val boxText = p.boxText(pg, box)
+      val boxText = p.boxText(tableRow.pg, box)
       println(f"Box Text: '${boxText}%s'")
     }
 
