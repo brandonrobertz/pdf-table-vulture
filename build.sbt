@@ -10,12 +10,13 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "org.bxroberts",
       scalaVersion := "2.12.8",
-      version      := "0.0.2"
+      version      := "1.0.0"
     )),
     name := "PDFTableVulture",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.5" % "test",
       "com.github.tototoshi" %% "scala-csv" % "1.3.5",
+      "com.typesafe.play" %% "play-json" % "2.6.10",
     ),
     scalacOptions += "-feature",
     scalacOptions += "-Yresolve-term-conflict:object"

@@ -207,7 +207,7 @@ class TableExtractor(pdf: Document) {
     return cells
   }
 
-  def writeCSV(rows: Array[Array[String]], filename: String = "out.csv") = {
+  def writeCSV(rows: Array[Array[String]], filename: String) = {
     val f = new File(filename)
     val writer = CSVWriter.open(f)
     for(row <- rows) {
@@ -237,7 +237,7 @@ class TableExtractor(pdf: Document) {
    * 5. This gives us a multi dimensional array
    * that we need to turn into a CSV
    */
-  def extractTable(table: TableDesc) = {
+  def extractTable(table: TableDesc, outputFile: String = "out.csv") = {
     val tableRows: Array[TableRow] = findTableRows(table)
     var rows: ArrayBuffer[Array[String]] = ArrayBuffer.empty
     assert(tableRows.length == table.questions.length)
@@ -251,6 +251,6 @@ class TableExtractor(pdf: Document) {
       // }
       rows += cells.toArray
     }
-    writeCSV(rows.toArray)
+    writeCSV(rows.toArray, outputFile)
   }
 }

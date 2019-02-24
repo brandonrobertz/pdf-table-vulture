@@ -287,19 +287,3 @@ class Primitives(pdf: Document) {
   }
 }
 
-object PDFTableVulture {
-  def main(args: Array[String]) {
-    println("==================================================")
-    val filename = "data/DEOCS.pdf"
-    val tableName = "Table 2.13 Sexual Assault Prevention Climate"
-    val page = 17
-    val pdf: Document = PDF.open(filename)
-    val primitives = new Primitives(pdf)
-    val pageText: String = primitives.extractPageText(page)
-    val box = new Box(page, 200, 200, 100, 50)
-    val boxText = primitives.boxText(box)
-    println(boxText)
-    println("--------------------------------------------------")
-  }
-}
-
