@@ -56,6 +56,7 @@ class TableExtractor(pdf: Document) {
     var pgSize: Size = p.pageSize(pg)
 
     // val question = table.questions(i)
+    println("findTableRow -----------------------------------------------")
     println(f"Question text: ${question.text}")
     println(f"Finding question top: ${question.topText}%s")
     println(f"Start Y: ${startY}%d")
@@ -65,12 +66,13 @@ class TableExtractor(pdf: Document) {
     println(f"Found top coord: ${topCoord.toString}%s")
 
     if (topCoord.y == -1) {
+      println("Not found, checking next page")
       return findTableRow(pg + 1, question, pgSize.h)
     }
 
     // use the topY as start (not topY-1) in case we have
     // single line question
-    println("============================================================")
+    println("------------------------------------------------------------")
     println(f"Finding question bottom: ${question.bottomText}%s")
     val btmCoord = p.findText(
       pg, question.bottomText, 0, startY=topCoord.y
@@ -78,14 +80,14 @@ class TableExtractor(pdf: Document) {
     println(f"Found bottom coord: ${btmCoord.toString}%s")
 
     // build a box using our two Y coords, assume 100% width
-    println("============================================================")
+    println("------------------------------------------------------------")
     println("Building box")
     val box = new Box(
       pg, 0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
     )
     println(f"box: ${box.toString}%s")
 
-    println("============================================================")
+    println("------------------------------------------------------------")
     println("Building tableRow")
     val tableRow = new TableRow(pg, box)
     println(f"tableRow: ${tableRow.toString}%s")
@@ -97,8 +99,11 @@ class TableExtractor(pdf: Document) {
    * identifying each row in the table.
    */
   def findTableRows(table: TableDesc): Array[TableRow] = {
+    println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Identifying title page")
     var pg: Int = p.identifyPage(table.title)
+    println(f"Page: ${pg}%d")
     val titleCoord: Coord = p.findText(pg, table.title)
+    println(f"Title coord: ${titleCoord.toString}%s")
 
     println(f"findTableRows pg: ${pg}%d")
     println(f"titleCoord: ${titleCoord.toString}%s")
@@ -110,18 +115,18 @@ class TableExtractor(pdf: Document) {
     val nQuestions: Int = table.questions.length
     var rows: Array[TableRow] = Array.empty
     for (i <- 0 to nQuestions - 1) {
-      println(f"############################################################ ROW ${i}%d")
+      println(f"=================================================== ROW ${i}%d")
       val question = table.questions(i)
       val (tableRow, box, btmY) = findTableRow(pg, question, lastY)
       rows ++= Array(tableRow)
 
       // save for next run, to avoid repeating rows for
       // texts that have duplicate starts of questions
-      lastY = btmY - 5
+      lastY = btmY - 1
       // save the page we found the text on
       pg = box.pg
 
-      println("============================================================")
+      println("---------------------------------------------------")
       val boxText = p.boxText(box)
       println(f"Box Text: '${boxText}%s'")
     }

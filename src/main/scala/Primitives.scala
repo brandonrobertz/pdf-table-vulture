@@ -14,13 +14,12 @@ import com.snowtide.pdf.RegionOutputTarget
 /**
  * A single point on a PDF page
  */
-class Coord(_x: Int, _y: Int) {
-  // def pg = _pg
+class Coord(_pg: Int, _x: Int, _y: Int) {
+  def pg = _pg
   def x = _x
   def y = _y
   override def toString(): String = {
-    //  pg:${pg}%d,
-    return f"Coord x:${x}%d, y:${y}%d"
+    return f"Coord pg:${pg}%d, x:${x}%d, y:${y}%d"
   }
 }
 
@@ -123,7 +122,8 @@ class Primitives(pdf: Document) {
     }
 
     // use a very thin scan line to get accurate results
-    val scanLineSize = 1
+    // this should be approx the size of a text line
+    val scanLineSize = 5
     breakable {
       while (y >= 0) {
         // extract text from a thin line across the page
@@ -202,9 +202,12 @@ class Primitives(pdf: Document) {
    * match and then using a whitespace-ignoring regex match.
    */
   def exactOrRegexMatch(
-    needle: String, regexNeedle: String, haystack: String
+    needle: String, regexNeedle: String, haystack: String, debug: Boolean = false
   ): Boolean = {
     val cleaned = haystack.replace("\n", "").replaceAll("\\s+", " ")
+    if (debug) {
+      println(f"finding: '${cleaned}%s' contains '${needle}%s'")
+    }
     if (cleaned contains needle) {
       println("Contains match!")
       return true
@@ -232,14 +235,17 @@ class Primitives(pdf: Document) {
    * This gives us propert X and Y values for our text.
    */
   def findText(
-    pg: Int, title: String, startX: Int = -1, startY: Int = -1
+    pg: Int, title: String, startX: Int = -1, startY: Int = -1,
+    debug: Boolean = false
   ): Coord = {
 
     val ptrn = regexify(title)
     println(f"findText: ${title}%s, pg: ${pg}%d, startY: ${startY}%d")
     def stringFound(text: String): Boolean = {
-      val m = exactOrRegexMatch(title, ptrn, text)
-      // println(f"finding Y: '${text}%s' contains '${title}%s'? ${m}%b")
+      if (text.isEmpty) {
+        return false
+      }
+      val m = exactOrRegexMatch(title, ptrn, text, debug=debug)
       return m
     }
 
@@ -262,7 +268,7 @@ class Primitives(pdf: Document) {
     val x = xScanUntil(pg, stringCaptured, y)
     println(f"Found x: ${x}%d")
 
-    return new Coord(x, y)
+    return new Coord(pg, x, y)
   }
 
   /**

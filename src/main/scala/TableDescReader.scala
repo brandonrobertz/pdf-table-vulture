@@ -12,7 +12,7 @@ class TableDescReader() {
   def loadFile(filename: String): TableDesc = {
     val jsonText = Source.fromFile(
       filename
-    ).getLines.mkString
+    ).getLines.mkString.trim
    return loadText(jsonText)
   }
 
