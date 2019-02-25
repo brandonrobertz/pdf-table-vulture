@@ -279,10 +279,10 @@ class Primitives(pdf: Document) {
     for (pg <- 1 to pages - 1) {
       // Extract page text
       val pageText = extractPageText(pg)
-      // println("================================================")
-      // println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
-      // println(f"pageText:\n${pageText}%s")
-      // println("------------------------------------------------")
+      println("++++++++++++++++++++++++++++++++++++++++++++++++")
+      println(f"page: ${pg}%d text: ${text}%s ptrn: ${ptrn}%s")
+      println(f"pageText:\n${pageText}%s")
+      println("................................................")
 
       if (exactOrRegexMatch(text, ptrn, pageText)) {
         return pg

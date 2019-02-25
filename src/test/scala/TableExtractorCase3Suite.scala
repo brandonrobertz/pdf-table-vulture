@@ -5,50 +5,54 @@ import com.snowtide.pdf.Document
 
 import org.scalatest.FunSuite
 
-class TableExtractorBase2Suite extends FunSuite {
-  val testFile = "./data/DEOCS_1st_RECON_DEOCS_NOV_16.pdf"
+class TableExtractorBase3Suite extends FunSuite {
+  val testFile = "./data/DEOCS_2nd_Marine_Division_Roll-up.pdf"
   val pdf: Document = PDF.open(testFile)
-  val title = "Table 2.14 Sexual Assault Response Climate"
+  val title = "Table 2.16 Sexual Harassment Retaliation Climate"
   val q1 = new TableQuestion("""
-If a coworker were to report a
-sexual assault, my chain of
-command/supervision would take
-the report seriously.
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be excluded from social interactions
+or conversations.
 """)
   val q2 = new TableQuestion("""
-If a coworker were to report a
-sexual assault, my chain of
-command/supervision would keep
-the knowledge of the report limited
-to those with a need to know.
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be subjected to insulting or
+disrespectful remarks or jokes.
 """)
   val q3 = new TableQuestion("""
-If a coworker were to report a
-sexual assault, my chain of
-command/supervision would
-discourage military members or
-employees from spreading rumors
-and speculation about the
-allegation.
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be blamed for causing problems.
 """)
   val q4 = new TableQuestion("""
-If a coworker were to report a
-sexual assault, my chain of
-command/supervision would
-promote healthcare, legal, or other
-support services to the reporter.
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be denied career opportunities.
 """)
   val q5 = new TableQuestion("""
-If a coworker were to report a
-sexual assault, my chain of
-command/supervision would
-support the reporter for speaking
-up.
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be disciplined or given other
+corrective action.
+""")
+  val q6 = new TableQuestion("""
+In my work group, military
+members or employees who file a
+sexual harassment complaint would
+be discouraged from moving
+forward with the complaint.
 """)
   val te: TableExtractor = new TableExtractor(pdf)
 }
 
-class TableRowCase2Suite extends TableExtractorBase2Suite {
+class TableRowCase3Suite extends TableExtractorBase3Suite {
   test("Can parse multiline questions propertly") {
     assert(q1.topText.length > 0)
     assert(q1.bottomText.length > 0)
@@ -95,7 +99,7 @@ class TableRowCase2Suite extends TableExtractorBase2Suite {
 
 }
 
-class SplitTableRowCase2Suite extends TableExtractorBase2Suite {
+class SplitTableRowCase3Suite extends TableExtractorBase3Suite {
   test("Can split a tableRow") {
     val table: TableDesc = new TableDesc(
       title,
@@ -115,19 +119,19 @@ class SplitTableRowCase2Suite extends TableExtractorBase2Suite {
       // do a specific check to ensure we get the start and
       // end char correct
       if (i == 0) {
-        assert(val1 == "0")
-        assert(val2 == "(0%)")
-        assert(valN == "(55%)")
+        assert(val1 == "371")
+        assert(val2 == "(35%)")
+        assert(valN == "(3%)")
       } else if (i == 1) {
-        assert(val1 == "2")
-        assert(val2 == "(2%)")
-        assert(valN == "(50%)")
+        assert(val1 == "381")
+        assert(val2 == "(36%)")
+        assert(valN == "(2%)")
       }
     }
   }
 }
 
-class CSVWriterCase2Suite extends TableExtractorBase2Suite {
+class CSVWriterCase3Suite extends TableExtractorBase3Suite {
   test("Can extract table to CSV") {
     val table: TableDesc = new TableDesc(
       title,

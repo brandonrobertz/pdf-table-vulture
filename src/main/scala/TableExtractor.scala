@@ -134,8 +134,12 @@ class TableExtractor(pdf: Document) {
     return rows
   }
 
-  def cleanCellValue(text: String): String = {
-    return text.replace(
+  def cleanCellValue(text: String, stripChar: Boolean = false): String = {
+    var tmpTxt = text
+    if (stripChar) {
+      tmpTxt = text.replaceAll("[^0-9\\(\\)%\\s]+", "")
+    }
+    return tmpTxt.replace(
       "\n", " "
     ).replaceAll(
       "\\s+", " "
@@ -205,7 +209,7 @@ class TableExtractor(pdf: Document) {
     val vBox = new Box(
       row.pg, splitPointX, row.box.y, row.box.w - splitPointX, row.box.h
     )
-    val values: String = cleanCellValue(p.boxText(vBox))
+    val values: String = cleanCellValue(p.boxText(vBox), stripChar=true)
     println(f"Values: ${values}%s")
     cells ++= values.split("\\s+", nValues)
 
