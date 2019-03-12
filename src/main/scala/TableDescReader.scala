@@ -20,6 +20,8 @@ class TableDescReader() {
     val json: JsValue = Json.parse(text)
     val title = (json \ "title").as[String]
     println(f"Loaded table desc title: ${title}%s")
+    val nValues = (json \ "nValues").as[Int]
+    println(f"Number of values per row: ${nValues}%s")
     val questions: Array[String] = (json \ "questions").as[Array[String]]
     var tableQs: ArrayBuffer[TableQuestion] = ArrayBuffer[TableQuestion]()
     for (q <- questions) {
@@ -27,7 +29,7 @@ class TableDescReader() {
       tableQs += new TableQuestion(q)
     }
     val table: TableDesc = new TableDesc(
-      title, tableQs.toArray
+      title, tableQs.toArray, nValues
     )
     return table
   }

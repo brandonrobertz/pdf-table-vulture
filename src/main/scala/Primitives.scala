@@ -147,10 +147,9 @@ class Primitives(pdf: Document) {
    */
   def xScanUntil(
     pg: Int, condition: (String) => Boolean, y: Int, startX: Int = -1,
-    direction: String = "dec"
+    direction: String = "dec", scanLineSize: Int = 1,
   ): Int = {
     println(f"xScanUntil pg:${pg}%d y:${y}%d startX:${startX}%d dir:${direction}%s")
-    val scanLineSize = 1
     val size: Size = pageSize(pg)
     var x = startX;
     if (startX == -1) {
@@ -192,7 +191,7 @@ class Primitives(pdf: Document) {
     val replaced =  string.replaceAll(
       "\\s+", "\\\\s*"
     ).replaceAll(
-      "’", "."
+      "[^0-9A-Za-z\\s]", "."
     )
     return f".*\\b${replaced}%s\\b.*"
   }

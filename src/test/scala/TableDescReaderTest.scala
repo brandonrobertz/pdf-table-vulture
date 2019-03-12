@@ -7,7 +7,8 @@ class TableDescReaderSuite extends FunSuite {
     val text = """
       {
         "title": "This is a header",
-        "questions":["one", "two"]
+        "questions":["one", "two"],
+        "nValues": 14
       }
     """
     val table = new TableDescReader().loadText(text)

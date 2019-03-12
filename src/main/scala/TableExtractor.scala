@@ -1,5 +1,6 @@
 package org.bxroberts.tablevulture
 
+import java.lang.System
 import java.io.File
 import scala.collection.mutable.ArrayBuffer
 
@@ -26,9 +27,10 @@ class TableQuestion(_text: String) {
 /**
  * A description of a table we're intending on extracting.
  */
-class TableDesc(_title: String, _questions: Array[TableQuestion]) {
+class TableDesc(_title: String, _questions: Array[TableQuestion], _nValues: Int = 14) {
   def title = _title
   def questions = _questions
+  def nValues = _nValues
 }
 
 /**
@@ -51,9 +53,15 @@ class TableExtractor(pdf: Document) {
   def p = new Primitives(pdf)
 
   def findTableRow(
-    pg: Int, question: TableQuestion, startY: Int
+    pg: Int, question: TableQuestion, startY: Int, depth: Int = 0
   ): (TableRow, Box, Int) = {
     var pgSize: Size = p.pageSize(pg)
+    var minHeight = 25;
+
+    if (depth > 3) {
+      println("Max find row depth met, failing extraction!")
+      System.exit(1)
+    }
 
     // val question = table.questions(i)
     println("findTableRow -----------------------------------------------")
@@ -67,7 +75,7 @@ class TableExtractor(pdf: Document) {
 
     if (topCoord.y == -1) {
       println("Not found, checking next page")
-      return findTableRow(pg + 1, question, pgSize.h)
+      return findTableRow(pg + 1, question, pgSize.h, depth + 1)
     }
 
     // use the topY as start (not topY-1) in case we have
@@ -82,8 +90,12 @@ class TableExtractor(pdf: Document) {
     // build a box using our two Y coords, assume 100% width
     println("------------------------------------------------------------")
     println("Building box")
+    var height = topCoord.y - btmCoord.y
+    if (height < minHeight) {
+      height = minHeight
+    }
     val box = new Box(
-      pg, 0, topCoord.y, pgSize.w, -(topCoord.y - btmCoord.y)
+      pg, 0, topCoord.y, pgSize.w, -height
     )
     println(f"box: ${box.toString}%s")
 
@@ -127,8 +139,8 @@ class TableExtractor(pdf: Document) {
       pg = box.pg
 
       println("---------------------------------------------------")
-      val boxText = p.boxText(box)
-      println(f"Box Text: '${boxText}%s'")
+      val boxText = p.boxText(tableRow.box)
+      println(f"tableRow Box Text: '${boxText}%s'")
     }
 
     return rows
@@ -137,7 +149,7 @@ class TableExtractor(pdf: Document) {
   def cleanCellValue(text: String, stripChar: Boolean = false): String = {
     var tmpTxt = text
     if (stripChar) {
-      tmpTxt = text.replaceAll("[^0-9\\(\\)%\\s]+", "")
+      tmpTxt = text.replaceAll("[^0-9\\(\\)%\\s\\.]+", "")
     }
     return tmpTxt.replace(
       "\n", " "
@@ -165,10 +177,10 @@ class TableExtractor(pdf: Document) {
    * looking for space split thresholds. when one is found, split
    * the values at that point, keep going until nValues is met
    */
-  def splitTableRow(
+  def splitTableRowNative(
     question: TableQuestion, row: TableRow, nValues: Int = 14
   ): ArrayBuffer[String] = {
-    println("splitTableRow Building row cells...")
+    println("splitTableRowNative Building row cells...")
     var cells = ArrayBuffer[String]()
     // wait for full first line of question
     def findEndOfQ(text: String): Boolean = {
@@ -182,21 +194,22 @@ class TableExtractor(pdf: Document) {
     // of the question scanned. the end of the top line of the question
     // will be our endQX value
     val endQX = p.xScanUntil(
-      row.pg, findEndOfQ, row.box.y, 0, "inc"
+      row.pg, findEndOfQ, row.box.y, 0, "inc",
+      scanLineSize = row.box.h
     )
     println(f"endQX: ${endQX}%d")
 
     def findStartOfVal(text: String): Boolean = {
-      // println(f"searching for number")
-      // println(f"text: ${text}%s")
-      return text matches ".*[0-9]+.*"
+      println(f"searching for number in text: ${text}%s")
+      return text matches ".*[0-9\\.\\(\\)\\%]+"
     }
     val startVX = p.xScanUntil(
-      row.pg, findStartOfVal, row.box.y, endQX + 5, "inc"
+      row.pg, findStartOfVal, row.box.y, endQX + 5, "inc",
+      scanLineSize = row.box.h
     )
     println(f"startVX: ${startVX}%d")
 
-    // get the middle point, this is rounded
+    // get the point right before the value matched (should be -1)
     val splitPointX = (endQX + startVX) / 2
 
     val qBox = new Box(
@@ -211,6 +224,51 @@ class TableExtractor(pdf: Document) {
     )
     val values: String = cleanCellValue(p.boxText(vBox), stripChar=true)
     println(f"Values: ${values}%s")
+    cells ++= values.split("\\s+", nValues)
+
+    return cells
+  }
+
+  def findCharSplitPoint(line: String): Int = {
+    for (i <- 0 to line.length - 1) {
+      val c = line(i)
+      if (c.toString() matches "[0-9\\.\\(\\)]") {
+        return i
+      }
+    }
+    return -1
+  }
+
+  def splitTableRow(
+    question: TableQuestion, row: TableRow, nValues: Int = 14
+  ): ArrayBuffer[String] = {
+    var cells = ArrayBuffer[String]()
+
+    val charBlock = p.boxText(row.box)
+    val lines = charBlock.split("\n")
+
+    var qText = ""
+    var values = ""
+    for (line <- lines) {
+      println(f"line: ${line}")
+      // divide the numbers from the question
+      if (line matches ".*[0-9].*") {
+        val i = findCharSplitPoint(line)
+        qText += line slice (0, i)
+        values += line slice (i, line.length)
+      }
+      // this is just a question line
+      else {
+        qText += line
+      }
+    }
+
+    println(f"row.box: ${row.box.toString}")
+    println(f"charBlock: ${charBlock}")
+    println(f"qText: ${qText}")
+    println(f"values: ${values}")
+
+    cells += qText.replaceAll("\n", " ").replaceAll("\\s+", " ").trim()
     cells ++= values.split("\\s+", nValues)
 
     return cells
@@ -254,7 +312,8 @@ class TableExtractor(pdf: Document) {
       val question = table.questions(i)
       // println(f"Question ${question}%s")
       val row = tableRows(i)
-      val cells = splitTableRow(question, row)
+      // val cells = splitTableRowNative(question, row, table.nValues)
+      val cells = splitTableRow(question, row, table.nValues)
       // for (item <- cells) {
       //   println(f"Item: ${item}%s")
       // }
