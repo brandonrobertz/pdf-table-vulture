@@ -240,7 +240,10 @@ class TableExtractor(pdf: Document) {
   }
 
   def splitTableRow(
-    question: TableQuestion, row: TableRow, nValues: Int = 14
+    question: TableQuestion, row: TableRow,
+    // optional, for final output
+    questionNum: Int = -1,
+    pdfName: String = "", nValues: Int = 14
   ): ArrayBuffer[String] = {
     var cells = ArrayBuffer[String]()
 
@@ -268,15 +271,25 @@ class TableExtractor(pdf: Document) {
     println(f"qText: ${qText}")
     println(f"values: ${values}")
 
+    // append the individual values
+    var splitValues = values.split("\\s+")
+    println(f"Actual no. of values: ${splitValues.length}, Expected no.: ${nValues}")
+    if (splitValues.length != nValues) {
+      println("ERROR: Incorrect number of values detected. Bailing.")
+      System.exit(1)
+    }
+
+    // save the actual question (for debugging)
     cells += qText.replaceAll("\n", " ").replaceAll("\\s+", " ").trim()
-    cells ++= values.split("\\s+", nValues)
+    cells ++= splitValues
 
     return cells
   }
 
-  def writeCSV(rows: Array[Array[String]], filename: String) = {
+  def writeCSV(rows: Array[Array[String]], header: Array[String], filename: String) = {
     val f = new File(filename)
     val writer = CSVWriter.open(f)
+    writer.writeRow(header)
     for(row <- rows) {
       writer.writeRow(row)
     }
@@ -304,21 +317,48 @@ class TableExtractor(pdf: Document) {
    * 5. This gives us a multi dimensional array
    * that we need to turn into a CSV
    */
-  def extractTable(table: TableDesc, outputFile: String = "out.csv") = {
+  def extractTable(
+    table: TableDesc, outputFile: String = "out.csv",
+    pdfName: String = ""
+  ) = {
     val tableRows: Array[TableRow] = findTableRows(table)
     var rows: ArrayBuffer[Array[String]] = ArrayBuffer.empty
     assert(tableRows.length == table.questions.length)
+    var qPlusValCells: Int = 0
     for (i <- 0 to tableRows.length-1) {
       val question = table.questions(i)
       // println(f"Question ${question}%s")
       val row = tableRows(i)
       // val cells = splitTableRowNative(question, row, table.nValues)
-      val cells = splitTableRow(question, row, table.nValues)
+      val cells = splitTableRow(
+        question, row,
+        nValues = table.nValues,
+      )
+
+      // TODO: extract date from PDF and put into this field
+      // save the report name
+      cells += pdfName
+      // save the question num because they can have spelling
+      // and formatting differences. make this 1-indexed
+      cells += f"${i + 1}"
+
       // for (item <- cells) {
       //   println(f"Item: ${item}%s")
       // }
       rows += cells.toArray
     }
-    writeCSV(rows.toArray, outputFile)
+
+    var header: ArrayBuffer[String] = ArrayBuffer.empty
+
+    header += "question"
+    var responses: Int = ((table.nValues / 2) - 1) / 2
+    println(f"Building header with ${responses} discrete options")
+    for (i <- -responses to responses) {
+      header += f"${i}"
+      header += f"${i}_pct"
+    }
+    header += "report"
+    header += "question_num"
+    writeCSV(rows.toArray, header.toArray, outputFile)
   }
 }

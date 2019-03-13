@@ -20,6 +20,6 @@ object PDFTableVulture {
 
     val pdf: Document = PDF.open(inputPDFFilename)
     val te: TableExtractor = new TableExtractor(pdf)
-    te.extractTable(tableDesc, outputCSVFilename)
+    te.extractTable(tableDesc, outputCSVFilename, pdfName=inputPDFFilename)
   }
 }

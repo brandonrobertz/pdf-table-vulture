@@ -10,7 +10,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "org.bxroberts",
       scalaVersion := "2.12.8",
-      version      := "1.0.8"
+      version      := "1.0.11"
     )),
     name := "PDFTableVulture",
     libraryDependencies ++= Seq(
